@@ -1,0 +1,125 @@
+##
+## Script was discovered in http://habrahabr.ru/post/73506/
+##
+#check file apache_bin with path /usr/local/apache/bin/httpd
+#
+#        if failed checksum and
+#
+## sum - это стандартный md5-хэш. Его можно получить, 
+## натравив программу md5sum на нужный файл
+#
+#        expect the sum 8f7f419955cefa0b33a2ba316cba3659 then unmonitor
+#        
+#            if failed permission 755 then unmonitor
+#            if failed uid root then unmonitor
+#            if failed gid root then unmonitor
+#
+## отдельное письмо на отдельный адрес и с отдельным содержимым. 
+#
+#        alert security@zooclub.ru on {
+#            checksum, permission, uid, gid, unmonitor
+#            } with the mail-format { subject: Alarm! }
+#        group server 
+
+check process apache with pidfile /var/run/apache2.pid
+    
+    group www
+
+    start program = "/etc/init.d/apache2 start" with timeout 60 seconds
+    stop program  = "/etc/init.d/apache2 stop"
+
+##
+##    if failed host localhost port 80 protocol http 
+##        and requrest "/index.html"
+##        with timeout 15 secons
+##    then restart
+##
+
+    if 5 restarts within 5 cycles then timeout
+
+## проверка процесса осуществляется по pid-файлу. Путь к pid-файлу всегда абсолютный
+
+#check process apache with pidfile /var/run/apache2.pid
+#
+#        start program = "/etc/init.d/apache2 start"
+#        stop program  = "/etc/init.d/apache2 stop"
+#
+#        if cpu > 60% for 2 cycles then alert
+
+## если вебсервер сожрал 80% процессрного времени и не отдает его
+## пять циклов проверки подряд - рестартуем его
+
+#        if cpu > 80% for 5 cycles then restart
+
+## аналогично по суммарной памяти, которую он поглотил.
+
+#        if totalmem > 500.0 MB for 5 cycles then restart
+#        if children > 250 then restart
+
+## если load average сервера за 5 минут больше 10 8 циклов подряд - вырубаем.
+
+#        if loadavg(5min) greater than 10 for 8 cycles then stop
+
+## вот тут самое интересное - многоэтапная проверка:
+## первый шаг - подключение на 80 порт, протокол http
+
+#        if failed host 127.0.0.1 port 80 protocol http
+
+## если получилось - запрашиваем файл /index.html
+
+#        and request "/index.html"
+#        with timeout 15 seconds
+
+## а если что-то из цепочки не получилось - рестартуем демон
+#        then restart
+
+## проверка HTTP-SSL. Монит отдельно рассматривает SSL, и отдельно - защищаемый протокол.
+## Для того, чтобы иметь возможность проводить такие проверки, нужно собрать monit с поддержкой SSL. 
+## Любители FreeBSD - будьте внимательны при сборке!
+## По умолчанию он долежен собратся с поддержкой SSL, но если вы ее отключили - будет ошибка
+
+#           if failed port 443 type tcpssl protocol http 
+#           and request "/test.html"
+#           with timeout 15 seconds
+#                       then restart
+## если за последние пять циклов проверки было три рестарта или больше - пропускаем один цикл проверки.
+
+#        if 3 restarts within 5 cycles then timeout
+
+## проверку имеет смысл проводить только, если пройдена первая проверка (которая права доступа и проч). 
+## В противном случае все тесты безсмысленны.
+
+#       depends on apache_bin
+#       group server
+
+#check process apache with pidfile /opt/apache_misc/logs/httpd.pid
+#    group www
+
+#    start program = "/etc/init.d/apache start"
+#    stop  program = "/etc/init.d/apache stop"
+    
+#    if failed host localhost port 80 
+#        protocol HTTP request "/~hauk/monit/token" then restart
+#    if failed host 192.168.1.1 port 443 type TCPSSL 
+#        certmd5 12-34-56-78-90-AB-CD-EF-12-34-56-78-90-AB-CD-EF
+#    protocol HTTP    request http://localhost/~hauk/monit/token  then restart
+#    if 5 restarts within 5 cycles then timeout
+#    depends on apache_bin
+#    depends on apache_rc
+#
+#check file apache_bin with path /opt/apache/bin/httpd
+#
+#    group www
+#    
+#    if failed checksum then unmonitor
+#    if failed permission 755 then unmonitor
+#    if failed uid root then unmonitor
+#    if failed gid root then unmonitor
+#
+#check file apache_rc with path /etc/init.d/apache
+#    group www
+#
+#    if failed checksum then unmonitor
+#    if failed permission 755 then unmonitor
+#    if failed uid root then unmonitor
+#    if failed gid root then unmonitor

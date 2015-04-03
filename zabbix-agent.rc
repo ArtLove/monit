@@ -1,0 +1,4 @@
+check process zabbix-agent with pidfile /var/run/zabbix-agent/zabbix_agentd.pid
+
+    start program = "/etc/init.d/zabbix-agent start"
+    stop program = "/etc/init.d/zabbix-agent stop"

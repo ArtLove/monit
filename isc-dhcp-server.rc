@@ -1,0 +1,6 @@
+check process isc-dhcp-server with pidfile /var/run/dhcp-server/dhcpd.pid
+
+    start program = "/etc/init.d/isc-dhcp-server start"
+    stop program = "/etc/init.d/isc-dhcp-server stop"
+
+
